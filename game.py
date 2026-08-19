@@ -56,10 +56,9 @@ class Player():
             self.equip_weapon = what.name
         if where == "armor":
             self.equip_armor = what.name
-            
-        if "extra-health" in what.effects:
+        if "extra-health" in getattr(what, "effects"):
             player1.max_health = 150
-        if not "extra-health" in what.effects:
+        else:
             player1.max_health = 100
             
         print(str(self.equip_armor) + " " + str(self.equip_weapon) + " " + str(self.health) + " " + str(self.max_health))
@@ -69,6 +68,12 @@ class Player():
 class Item():
 
     def __init__(self,type= "none", what= "none"):
+        
+        self.name = str(what)
+        self.type = type
+        self.damage = 0
+        self.defence = 0
+        self.effects = []
 
         if type == "weapon":
             if what == "fists":
@@ -89,14 +94,6 @@ class Item():
                 self.defence = 1000
                 self.effects = ["defence-up", "thorns", "extra-health"]
                 
-        self.name = str(what)
-        self.type = type
-        
-        if self.type == 'none':
-            self.damage = 0
-            self.defence = 0
-            self.effects = []
-                
     def __str__(self):
         return self.name.replace("-", " ").title()
 
@@ -107,7 +104,7 @@ def clear_screen(what= "main"):
     
     if what == "main":
         for widget in main.winfo_children():
-            if widget not in (inv, exit_button, inventory_button):
+            if widget not in (inv, exit_button, bottom_left_frame):
                     widget.place_forget()
                     
     else:
@@ -118,8 +115,8 @@ def begin_game():
     
     clear_screen()
     
-    explore_button = tk.Button(main, text="Explore", font= FONT, command= explore)
-    explore_button.place(relx=0.5, rely=0.5, anchor= "center")
+    explore_button = tk.Button(bottom_left_frame, text="Explore", font= FONT, command= explore)
+    explore_button.pack(side="left", padx=0)
     
     button = tk.Button(main, text= "Secret Button", font = FONT, command= lambda: [player1.add("weapon", Item("weapon", "dev-sword")), player1.add("armor", Item("armor", "dev-armor"))])
     button.place(relx = 0.5, rely=0.7,anchor="center")
@@ -229,8 +226,11 @@ def explore():
 exit_button = tk.Button(main, text= "Exit", command= my_exit, font= FONT)
 exit_button.place(relx=1,rely=1,anchor="se")
 
-inventory_button = tk.Button(main, text="Inventory", command= open_inventory, font=FONT)
-inventory_button.place(relx=0, rely=1, anchor="sw")
+bottom_left_frame = tk.Frame(main)
+bottom_left_frame.place(relx=0, rely=1, anchor="sw")
+
+inventory_button = tk.Button(bottom_left_frame, text="Inventory", command= open_inventory, font=FONT)
+inventory_button.pack(side="left")
 
 player1 = Player()
 player1.add("weapon", Item("weapon", "fists"))
