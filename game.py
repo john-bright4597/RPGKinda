@@ -96,9 +96,13 @@ class Item():
                 self.effects = ["e-resist"]
             if what == "chain-mail":
                 self.defence = 5
+            if what == "iron":
+                self.defence = 8
+            if what == "steel"
+                self.defence = 12
             if what == "dev-armor":
                 self.defence = 1000
-                self.effects = ["defence-up", "thorns", "extra-health"]
+                self.effects = ["defence-up", "thorns", "extra-health", "resist"]
                 
     def __str__(self):
         return self.name.replace("-", " ").title()
@@ -125,7 +129,7 @@ def begin_game():
     explore_button.pack(side="left", padx=0)
     
     button = tk.Button(main, text= "Secret Button", font = FONT, command= lambda: [player1.add("weapon", Item("weapon", "dev-sword")), player1.add("armor", Item("armor", "dev-armor"))])
-    button.place(relx = 0.5, rely=0.7,anchor="center")
+    button.place(relx = 0.5, rely=0.5,anchor="center")
 
 def start_screen():
     title = tk.Label(main, text="Game", font= TITLE_FONT)
@@ -139,7 +143,8 @@ def open_inventory():
     
     """ Reappear """
     
-    inv.deiconify()
+    if inv.winfo_state() == "withdrawn":
+        inv.deiconify()
     
     """ Write """
     
@@ -169,7 +174,7 @@ def open_inventory():
                equip_button = tk.Button(inv_frame, text="Equip", font=FONT, command= lambda v=val: player1.equip(v.type, v))
                equip_button.pack(side="left", padx = 5)
     
-def update_inv():
+"""def update_inv():
     
     global inv
     
@@ -198,6 +203,8 @@ def update_inv():
             if not is_equipped and val.type != "none":
                 equip_button = tk.Button(inv_frame, text="Equip", font=FONT, command= lambda v=val: player1.equip(v.type, v))
                 equip_button.pack(side="left", padx = 5)
+
+"""
 
 def my_exit():
     
