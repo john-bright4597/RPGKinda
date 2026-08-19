@@ -32,6 +32,7 @@ FONT = ('arial', 10)
 class Player():
 
     def __init__(self):
+        self.max_health = 100
         self.health = 100
         self.money = 0
         self.inv = {
@@ -52,9 +53,18 @@ class Player():
     def equip(self, where, what):
         
         if where == "weapon":
-            self.equip_weapon = what
+            self.equip_weapon = what.name
         if where == "armor":
-            self.equip_armor = what
+            self.equip_armor = what.name
+            
+        if "extra-health" in what.effects:
+            player1.max_health = 150
+            player1.health = 150
+        if not "extra-health" in what.effects:
+            player1.max_health = 50
+            player1.health = 50
+            
+        print(str(self.equip_armor) + " " + str(self.equip_weapon) + " " + str(self.health) + " " + str(self.max_health))
             
         update_inv()
 
@@ -73,10 +83,18 @@ class Item():
                 self.damage = 1000
                 self.effects = ["bleeding", "flame", "poison"]
                 
-            self.type = "weapon"
+        if type == "armor":
+            if what == "dev-armor":
+                self.defence = 1000
+                self.effects = ["defence-up", "thorns", "extra-health"]
                 
         self.name = str(what)
         self.type = type
+        
+        if self.type == 'none':
+            self.damage = 0
+            self.defence = 0
+            self.effects = []
                 
     def __str__(self):
         return self.name.replace("-", " ").title()
@@ -102,7 +120,7 @@ def begin_game():
     explore_button = tk.Button(main, text="Explore", font= FONT, command= explore)
     explore_button.place(relx=0.5, rely=0.5, anchor= "center")
     
-    button = tk.Button(main, text= "Secret Button", font = FONT, command= lambda: player1.add("weapon", Item("weapon", "dev-sword")))
+    button = tk.Button(main, text= "Secret Button", font = FONT, command= lambda: [player1.add("weapon", Item("weapon", "dev-sword")), player1.add("armor", Item("armor", "dev-armor"))])
     button.place(relx = 0.5, rely=0.7,anchor="center")
 
 def start_screen():
@@ -144,7 +162,7 @@ def open_inventory():
             is_equipped = (val.name == player1.equip_weapon) or (val.name == player1.equip_armor)
            
             if not is_equipped and val.type != "none":
-               equip_button = tk.Button(inv_frame, text="Equip", font=FONT, command= lambda v=val: player1.equip(v.type, v.name))
+               equip_button = tk.Button(inv_frame, text="Equip", font=FONT, command= lambda v=val: player1.equip(v.type, v))
                equip_button.pack(side="left", padx = 5)
     
 def update_inv():
@@ -174,7 +192,7 @@ def update_inv():
             is_equipped = (val.name == player1.equip_weapon) or (val.name == player1.equip_armor)
             
             if not is_equipped and val.type != "none":
-                equip_button = tk.Button(inv_frame, text="Equip", font=FONT, command= lambda v=val: player1.equip(v.type, v.name))
+                equip_button = tk.Button(inv_frame, text="Equip", font=FONT, command= lambda v=val: player1.equip(v.type, v))
                 equip_button.pack(side="left", padx = 5)
 
 def my_exit():
