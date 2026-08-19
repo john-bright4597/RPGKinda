@@ -59,10 +59,8 @@ class Player():
             
         if "extra-health" in what.effects:
             player1.max_health = 150
-            player1.health = 150
         if not "extra-health" in what.effects:
-            player1.max_health = 50
-            player1.health = 50
+            player1.max_health = 100
             
         print(str(self.equip_armor) + " " + str(self.equip_weapon) + " " + str(self.health) + " " + str(self.max_health))
             
@@ -84,6 +82,9 @@ class Item():
                 self.effects = ["bleeding", "flame", "poison"]
                 
         if type == "armor":
+            if what == "chain-mail":
+                self.defence = 5
+                self.effects = []
             if what == "dev-armor":
                 self.defence = 1000
                 self.effects = ["defence-up", "thorns", "extra-health"]
