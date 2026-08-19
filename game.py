@@ -48,7 +48,7 @@ class Player():
     def add(self, where, what):
         if where in self.inv:
             self.inv[where].append(what)
-        update_inv()
+        inv()
         
     def equip(self, where, what):
         
@@ -63,7 +63,7 @@ class Player():
             
         print(str(self.equip_armor) + " " + str(self.equip_weapon) + " " + str(self.health) + " " + str(self.max_health))
             
-        update_inv()
+        inv()
 
 class Item():
 
@@ -137,7 +137,8 @@ def start_screen():
     title_start_button = tk.Button(main, text="Start", command= begin_game, font= FONT)
     title_start_button.place(relx= 0.5, rely= 0.7, anchor="center")
     
-def open_inventory():
+#def open_inventory():
+def inv()
     
     global player1, inv
     
@@ -231,7 +232,7 @@ def explore():
         player1.money += 1
         
     if inv.state() == "normal":
-        update_inv()
+        inv()
         
 
 # Main 
@@ -242,7 +243,7 @@ exit_button.place(relx=1,rely=1,anchor="se")
 bottom_left_frame = tk.Frame(main)
 bottom_left_frame.place(relx=0, rely=1, anchor="sw")
 
-inventory_button = tk.Button(bottom_left_frame, text="Inventory", command= open_inventory, font=FONT)
+inventory_button = tk.Button(bottom_left_frame, text="Inventory", command= inv, font=FONT)
 inventory_button.pack(side="left")
 
 player1 = Player()
