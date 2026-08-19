@@ -24,6 +24,8 @@ inv.withdraw()
 
 # Constants
 
+location = ""
+
 TITLE_FONT = ('arial', 24)
 FONT = ('arial', 10)
 
@@ -101,7 +103,7 @@ class Item():
         self.effects = []
 
         stats = ITEM_DATA.get(type, {}).get(what, {})
-        
+
         self.damage = stats.get("damage", 0)
         self.defence = stats.get("defence", 0)
         self.effects = stats.get("effects", [])
@@ -116,7 +118,7 @@ def clear_screen(what= "main"):
     
     if what == "main":
         for widget in main.winfo_children():
-            if widget not in (inv, exit_button, bottom_left_frame):
+            if widget not in (inv, bottom_right_frame, bottom_left_frame):
                     widget.place_forget()
                     
     else:
@@ -129,9 +131,49 @@ def begin_game():
     
     explore_button = tk.Button(bottom_left_frame, text="Explore", font= FONT, command= explore)
     explore_button.pack(side="left", padx=0)
+
+    town("grimsby")
     
-    button = tk.Button(main, text= "Secret Button", font = FONT, command= lambda: [player1.add("weapon", Item("weapon", "dev-sword")), player1.add("armor", Item("armor", "dev-armor"))])
-    button.place(relx = 0.5, rely=0.5,anchor="center")
+    #button = tk.Button(main, text= "Secret Button", font = FONT, command= lambda: [player1.add("weapon", Item("weapon", "dev-sword")), player1.add("armor", Item("armor", "dev-armor"))])
+    #button.place(relx = 0.5, rely=0.5,anchor="center")
+
+def town(what):
+
+    global location
+
+    location = what
+
+    town_name = tk.Label(main, text= what.title(), font=TITLE_FONT)
+    town_name.place(relx=0.5, rely=0.2, anchor="center")
+
+    town_frame = tk.Frame(main)
+    town_frame.place(relx=0.5, rely=0.5,anchor="center")
+
+    shop_button = tk.Button(town_frame, text= "Shop", font= FONT, command= lambda: shop(what, "general"))
+    shop_button.pack(side="left")
+
+def shop(where, which):
+
+    global back_button
+
+    clear_screen()
+
+    back_button.pack(side="right", padx= 0)
+
+    if where == "grimsby":
+        if which == "general":
+            name = tk.Label(main, text= "Mud & Dirt Co.", font= TITLE_FONT)
+            name.place(relx= 0.5, rely= 0.2, anchor= "center")
+    else:
+        name = tk.Label(main, text= "Congrats! You've found a unknown shop!", font= TITLE_FONT)
+        name.place(relx= 0.5, rely= 0.2, anchor= "center")
+
+def back(where):
+
+    clear_screen()
+
+    town(where)
+    back_button.pack_forget()
 
 def start_screen():
     title = tk.Label(main, text="Game", font= TITLE_FONT)
@@ -143,10 +185,7 @@ def open_inventory():
     
     global inv
     
-    """ Reappear """
-    
     inv.deiconify()
-    
     
 def update_inv():
     
@@ -178,8 +217,6 @@ def update_inv():
                 equip_button = tk.Button(inv_frame, text="Equip", font=FONT, command= lambda v=val: player1.equip(v.type, v))
                 equip_button.pack(side="left", padx = 5)
 
-
-
 def my_exit():
     
     global inv
@@ -210,11 +247,16 @@ def explore():
 
 # Main 
 
-exit_button = tk.Button(main, text= "Exit", command= my_exit, font= FONT)
-exit_button.place(relx=1,rely=1,anchor="se")
-
 bottom_left_frame = tk.Frame(main)
 bottom_left_frame.place(relx=0, rely=1, anchor="sw")
+
+bottom_right_frame = tk.Frame(main)
+bottom_right_frame.place(relx= 1, rely= 1, anchor="se")
+
+exit_button = tk.Button(bottom_right_frame, text= "Exit", command= my_exit, font= FONT)
+exit_button.pack(side="right")
+
+back_button = tk.Button(bottom_right_frame, text= "Back", font= FONT, command= lambda: back(location))
 
 inventory_button = tk.Button(bottom_left_frame, text="Inventory", command= lambda: [open_inventory(), update_inv()], font=FONT)
 inventory_button.pack(side="left")
