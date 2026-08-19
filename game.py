@@ -78,18 +78,24 @@ class Item():
         if type == "weapon":
             if what == "fists":
                 self.damage = 1
-                self.effects = []
+            if what == "wooden-sword":
+                self.damage = 2
             if what == "copper-sword":
+                self.damage = 3
+            if what == "iron-sword":
                 self.damage = 5
-                self.effects = []
+            if what == "steel-sword":
+                self.damage = 7
             if what == "dev-sword":
                 self.damage = 1000
                 self.effects = ["bleeding", "flame", "poison"]
                 
         if type == "armor":
+            if what == "leather":
+                self.defence = 2
+                self.effects = ["e-resist"]
             if what == "chain-mail":
                 self.defence = 5
-                self.effects = []
             if what == "dev-armor":
                 self.defence = 1000
                 self.effects = ["defence-up", "thorns", "extra-health"]
