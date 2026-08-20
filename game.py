@@ -110,8 +110,7 @@ class Player():
     def update_max_health(self):
         equipped_armor = next(
             (item for item in self.inv["armor"] if item.name == self.equip_armor),
-            None,
-        )
+            None)
         self.max_health = 150 if equipped_armor and "extra-health" in equipped_armor.effects else 100
 
 class Item():
@@ -179,9 +178,7 @@ def town(what):
 def shop(where, which):
 
     global back_button
-
     clear_screen()
-
     back_button.pack(side="right", padx= 0)
 
     if where == "grimsby":
@@ -247,9 +244,9 @@ def buy(what):
             player1.money -= ITEMS_SALE_MATERIALS[what]
             player1.add("material", what)
     if what in ITEMS_SALE_POTION:
-            if player1.money >= ITEMS_SALE_POTION[what]:
-                player1.money -= ITEMS_SALE_POTION[what]
-                player1.add("potion", what)
+        if player1.money >= ITEMS_SALE_POTION[what]:
+            player1.money -= ITEMS_SALE_POTION[what]
+            player1.add("potion", what)
     update_inv()
 
 def back(where):
@@ -269,7 +266,6 @@ def open_inventory():
     global inv
     inv.deiconify()
     
-    
 def update_inv():
     
     global inv
@@ -283,22 +279,22 @@ def update_inv():
         key_label = tk.Label(inv, text=f' <-- {key} -->', font=FONT)
         key_label.pack(pady=2)
         if isinstance(value, dict):
-          for sub_key, sub_val in value.items():
-            inv_label = tk.Label(inv, text=f'{sub_key.replace("-", " ").title()}: {sub_val}', font=FONT)
-            inv_label.pack(pady=2)
+            for sub_key, sub_val in value.items():
+                inv_label = tk.Label(inv, text=f'{sub_key.replace("-", " ").title()}: {sub_val}', font=FONT)
+                inv_label.pack(pady=2)
         else:
-          for val in value:
-            inv_frame = tk.Frame(inv)
-            inv_frame.pack(pady=2)
-              
-            inv_label = tk.Label(inv_frame, text=val, font=FONT)
-            inv_label.pack(side= "left")
-            
-            is_equipped = (val.name == player1.equip_weapon) or (val.name == player1.equip_armor)
-            
-            if not is_equipped and val.type != "none":
-                equip_button = tk.Button(inv_frame, text="Equip", font=FONT, command= lambda v=val: player1.equip(v.type, v))
-                equip_button.pack(side="left", padx = 5)
+            for val in value:
+                inv_frame = tk.Frame(inv)
+                inv_frame.pack(pady=2)
+                  
+                inv_label = tk.Label(inv_frame, text=val, font=FONT)
+                inv_label.pack(side= "left")
+                
+                is_equipped = (val.name == player1.equip_weapon) or (val.name == player1.equip_armor)
+                
+                if not is_equipped and val.type != "none":
+                    equip_button = tk.Button(inv_frame, text="Equip", font=FONT, command= lambda v=val: player1.equip(v.type, v))
+                    equip_button.pack(side="left", padx = 5)
 
 def my_exit():
     
