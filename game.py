@@ -127,7 +127,6 @@ class Item():
     def __str__(self):
         return self.name.replace("-", " ").title()
 
-
 # Functions
 
 def clear_screen(what= "main"):
@@ -224,13 +223,11 @@ def buy(what):
             if player1.money >= ITEMS_SALE_POTION[what]:
                 player1.money -= ITEMS_SALE_POTION[what]
                 player1.add("potion", what)
-
     update_inv()
 
 def back(where):
 
     clear_screen()
-
     town(where)
     back_button.pack_forget()
 
@@ -243,8 +240,8 @@ def start_screen():
 def open_inventory():
     
     global inv
-    
     inv.deiconify()
+    
     
 def update_inv():
     
@@ -252,7 +249,7 @@ def update_inv():
     
     clear_screen("inv")
     
-    money_label = tk.Label(inv, text= f"money: {player1.money}", font= FONT)
+    money_label = tk.Label(inv, text= f"Money: {player1.money}", font= FONT)
     money_label.pack(pady=2)
     
     for key, value in player1.inv.items():
@@ -260,7 +257,7 @@ def update_inv():
         key_label.pack(pady=2)
         if isinstance(value, dict):
           for sub_key, sub_val in value.items():
-            inv_label = tk.Label(inv, text=f'{sub_key}: {sub_val}', font=FONT)
+            inv_label = tk.Label(inv, text=f'{sub_key.replace("-", " ").title()}: {sub_val}', font=FONT)
             inv_label.pack(pady=2)
         else:
           for val in value:
@@ -303,7 +300,6 @@ def explore():
     if inv.state() == "normal":
         update_inv()
         
-
 # Main 
 
 bottom_left_frame = tk.Frame(main)
