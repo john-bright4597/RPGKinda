@@ -49,6 +49,18 @@ ITEM_DATA = {
     },
 }
 
+ITEMS_SALE_POTION = {
+    "health-potion" : 15,
+    "greater-health-potion": 30,
+    "defence-potion": 25
+}
+
+ITEMS_SALE_MATERIALS = {
+    "wood" : 2,
+    "stone" : 2,
+    "raw-iron" : 6
+}
+
 # Classes
 
 class Player():
@@ -61,7 +73,7 @@ class Player():
             "weapon": [], 
             "armor": [],
             "potion": [],
-            "material": {"wood": 0, "stone": 0}
+            "material": {"wood": 0, "stone": 0, "raw-iron": 0}
         }
         
         self.equip_weapon = ""
@@ -69,7 +81,11 @@ class Player():
 
     def add(self, where, what):
         if where in self.inv:
-            self.inv[where].append(what)
+            if where != "material":
+                self.inv[where].append(what)
+            else:
+                self.inv[where][what] += 1
+
         update_inv()
         
     def equip(self, where, what):
@@ -81,7 +97,7 @@ class Player():
 
         self.update_max_health()
             
-        print(str(self.equip_armor) + " " + str(self.equip_weapon) + " " + str(self.health) + " " + str(self.max_health))
+        #print(str(self.equip_armor) + " " + str(self.equip_weapon) + " " + str(self.health) + " " + str(self.max_health))
             
         update_inv()
 
@@ -119,7 +135,7 @@ def clear_screen(what= "main"):
     if what == "main":
         for widget in main.winfo_children():
             if widget not in (inv, bottom_right_frame, bottom_left_frame):
-                    widget.place_forget()
+                widget.destroy()
                     
     else:
         for widget in inv.winfo_children():
@@ -164,9 +180,52 @@ def shop(where, which):
         if which == "general":
             name = tk.Label(main, text= "Mud & Dirt Co.", font= TITLE_FONT)
             name.place(relx= 0.5, rely= 0.2, anchor= "center")
+
+            items_frame = tk.Frame(main)
+            items_frame.place(relx=0.5, rely=0.4, anchor="center")
+
+            material_frame = tk.Frame(items_frame)
+            material_frame.pack(side="left", padx=20, anchor="n")
+
+            potion_frame = tk.Frame(items_frame)
+            potion_frame.pack(side="right", padx=20, anchor="n")
+
+            for item, cost in ITEMS_SALE_MATERIALS.items():
+                shop_frame = tk.Frame(material_frame)
+                shop_frame.pack(pady= 2)
+
+                shop_label = tk.Label(shop_frame, text=f"{item.replace("-", " ").title()} ${cost}", font= FONT)
+                shop_label.pack(side= "left")
+
+                buy_button = tk.Button(shop_frame, text= "Buy", font= FONT, command= lambda i = item: buy(i))
+                buy_button.pack(side= "left", padx=0)
+
+            for item, cost in ITEMS_SALE_POTION.items():
+                shop_frame = tk.Frame(potion_frame)
+                shop_frame.pack(pady= 2)
+
+                buy_button = tk.Button(shop_frame, text= "Buy", font= FONT, command= lambda i = item: buy(i))
+                buy_button.pack(side= "right", padx=0)
+
+                shop_label = tk.Label(shop_frame, text=f"{item.replace("-", " ").title()} ${cost}", font= FONT)
+                shop_label.pack(side= "right")
+
     else:
         name = tk.Label(main, text= "Congrats! You've found a unknown shop!", font= TITLE_FONT)
         name.place(relx= 0.5, rely= 0.2, anchor= "center")
+
+def buy(what):
+
+    if what in ITEMS_SALE_MATERIALS:
+        if player1.money >= ITEMS_SALE_MATERIALS[what]:
+            player1.money -= ITEMS_SALE_MATERIALS[what]
+            player1.add("material", what)
+    if what in ITEMS_SALE_POTION:
+            if player1.money >= ITEMS_SALE_POTION[what]:
+                player1.money -= ITEMS_SALE_POTION[what]
+                player1.add("potion", what)
+
+    update_inv()
 
 def back(where):
 
