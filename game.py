@@ -61,6 +61,12 @@ ITEMS_SALE_MATERIALS = {
     "raw-iron" : 6
 }
 
+ITEMS_SALE_WEAPONS = {
+    "wooden-sword": {"money": 15, "material": {"wood": 20}},
+    "iron-sword" : {"money": 30, "material": {"wood": 10, "raw-iron": 15}},
+    "steel-sword" : {"money": 50, "material": {"wood": 10, "raw-iron": 20, "stone": 15}}
+}
+
 # Classes
 
 class Player():
@@ -166,6 +172,9 @@ def town(what):
 
     shop_button = tk.Button(town_frame, text= "Shop", font= FONT, command= lambda: shop(what, "general"))
     shop_button.pack(side="left")
+    
+    black_smith_button = tk.Button(town_frame, text= "Black Smith", font= FONT, command= lambda: shop(what, "black-smith"))
+    black_smith_button.pack(side="left", padx= 5)
 
 def shop(where, which):
 
@@ -208,6 +217,24 @@ def shop(where, which):
 
                 shop_label = tk.Label(shop_frame, text=f"{item.replace("-", " ").title()} ${cost}", font= FONT)
                 shop_label.pack(side= "right")
+                
+        elif which == "black-smith":
+            
+            name = tk.Label(main, text= "Stone & Sons", font= TITLE_FONT)
+            name.place(relx= 0.5, rely= 0.2, anchor= "center")
+            
+            items_frame = tk.Frame(main)
+            items_frame.place(relx=0.5, rely=0.4, anchor="center")
+            
+            for item, details in ITEMS_SALE_WEAPONS.items():
+                
+                weapon_frame = tk.Frame(items_frame)
+                
+                shop_label = tk.Label(items_frame, text=f"{item.replace("-", " ").title()} ${details["money"]}", font= FONT)
+                shop_label.pack(side= "top", pady= 2)
+                
+                buy_button = tk.Button(items_frame, text= "Buy", font= FONT, command= lambda i = item: buy(i))
+                buy_button.pack(side= "right", padx=0)
 
     else:
         name = tk.Label(main, text= "Congrats! You've found a unknown shop!", font= TITLE_FONT)
