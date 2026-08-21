@@ -49,6 +49,12 @@ ITEM_DATA = {
     },
 }
 
+POTION_DATA =  {
+    "health-potion": {"heal": 25},
+    "greater-health-potion": {"heal": 50},
+    "defence-potion": {"defence": 10}
+}
+               
 ITEMS_SALE_POTION = {
     "health-potion" : 15,
     "greater-health-potion": 30,
@@ -78,7 +84,7 @@ class Player():
         self.inv = {
             "weapon": [], 
             "armor": [],
-            "potion": [],
+            "potion": {"health-potion": 0, "greater-health-potion": 0, "defence-potion": 0},
             "material": {"wood": 0, "stone": 0, "raw-iron": 0}
         }
         
@@ -87,10 +93,10 @@ class Player():
 
     def add(self, where, what):
         if where in self.inv:
-            if where != "material":
-                self.inv[where].append(what)
-            else:
+            if where == "material" or where == "potion":
                 self.inv[where][what] += 1
+            else:
+                self.inv[where].append(what)
 
         update_inv()
         
@@ -113,6 +119,22 @@ class Player():
             None)
         self.max_health = 150 if equipped_armor and "extra-health" in equipped_armor.effects else 100
 
+    def use(self, what):
+
+        if self.inv["potion"].get(what, 0) < 1:
+            return
+
+        effect = POTION_DATA.get(what, {})
+
+        if "heal" in effect:
+            self.health = min(self.max_health, self.health + effect["heal"])
+
+        if "defence-buff" in effect:
+            self.temp_defence_buff = effect["defence-buff"]
+
+        self.inv["potion"][what] -= 1
+        update_inv()
+
 class Item():
 
     def __init__(self,type= "none", what= "none"):
@@ -132,6 +154,12 @@ class Item():
     def __str__(self):
         return self.name.replace("-", " ").title()
 
+class Monster():
+
+    def __init__(self):
+
+        self.type = random.choice(["goblin", "orc", "slime", "giant"])
+
 # Functions
 
 def clear_screen(what= "main"):
@@ -148,6 +176,8 @@ def clear_screen(what= "main"):
 def begin_game():
     
     clear_screen()
+
+    global explore_button
     
     explore_button = tk.Button(bottom_left_frame, text="Explore", font= FONT, command= explore)
     explore_button.pack(side="left", padx=0)
@@ -169,10 +199,10 @@ def town(what):
     town_frame = tk.Frame(main)
     town_frame.place(relx=0.5, rely=0.5,anchor="center")
 
-    shop_button = tk.Button(town_frame, text= "Shop", font= FONT, command= lambda: shop(what, "general"))
+    shop_button = tk.Button(town_frame, text= "Shop", font= FONT, command= lambda: [shop(what, "general"), explore_button.pack_forget()])
     shop_button.pack(side="left")
     
-    black_smith_button = tk.Button(town_frame, text= "Black Smith", font= FONT, command= lambda: shop(what, "black-smith"))
+    black_smith_button = tk.Button(town_frame, text= "Black Smith", font= FONT, command= lambda: [shop(what, "black-smith"), explore_button.pack_forget()])
     black_smith_button.pack(side="left", padx= 5)
 
 def shop(where, which):
@@ -226,12 +256,18 @@ def shop(where, which):
             for item, details in ITEMS_SALE_WEAPONS.items():
                 
                 weapon_frame = tk.Frame(items_frame)
+                weapon_frame.pack(pady=2)
+
+                material_text = ", ".join(
+                f"{mat.replace('-', ' ').title()}: {amt}"
+                for mat, amt in details["material"].items()
+                )
                 
-                shop_label = tk.Label(items_frame, text=f"{item.replace("-", " ").title()} ${details["money"]}", font= FONT)
-                shop_label.pack(side= "top", pady= 2)
+                shop_label = tk.Label(weapon_frame, text=f"{item.replace("-", " ").title()} - ${details["money"]} and ({material_text})", font= FONT)
+                shop_label.pack(side= "left", pady= 2)
                 
-                buy_button = tk.Button(items_frame, text= "Buy", font= FONT, command= lambda i = item: buy(i))
-                buy_button.pack(side= "right", padx=0)
+                buy_button = tk.Button(weapon_frame, text= "Buy", font= FONT, command= lambda i = item: buy(i))
+                buy_button.pack(side= "left", padx=2)
 
     else:
         name = tk.Label(main, text= "Congrats! You've found a unknown shop!", font= TITLE_FONT)
@@ -247,12 +283,23 @@ def buy(what):
         if player1.money >= ITEMS_SALE_POTION[what]:
             player1.money -= ITEMS_SALE_POTION[what]
             player1.add("potion", what)
+    if what in ITEMS_SALE_WEAPONS:
+        attribute = ITEMS_SALE_WEAPONS[what]
+        broke_or_nope = player1.money >=  attribute["money"]and all(player1.inv["material"].get(mat, 0) >= amt for mat, amt in attribute["material"].items())
+
+        if broke_or_nope:
+            player1.money -= attribute["money"]
+            for mat, amt in attribute["material"].items():
+                player1.inv["material"][mat] -= amt
+            player1.add("weapon", Item("weapon", what))
+
     update_inv()
 
 def back(where):
 
     clear_screen()
     town(where)
+    explore_button.pack(side="left", padx=0)
     back_button.pack_forget()
 
 def start_screen():
@@ -280,8 +327,15 @@ def update_inv():
         key_label.pack(pady=2)
         if isinstance(value, dict):
             for sub_key, sub_val in value.items():
-                inv_label = tk.Label(inv, text=f'{sub_key.replace("-", " ").title()}: {sub_val}', font=FONT)
-                inv_label.pack(pady=2)
+                inv_frame = tk.Frame(inv)
+                inv_frame.pack(pady=2)
+
+                inv_label = tk.Label(inv_frame, text=f'{sub_key.replace("-", " ").title()}: {sub_val}', font=FONT)
+                inv_label.pack(side="left")
+
+                if key == "potion" and sub_val > 0:
+                    use_button = tk.Button(inv_frame, text="Use", font=FONT, command=lambda s=sub_key: player1.use(s))
+                    use_button.pack(side="left", padx=5)
         else:
             for val in value:
                 inv_frame = tk.Frame(inv)
