@@ -25,9 +25,10 @@ inv.withdraw()
 # Constants
 
 location = ""
+player_turn = True
 
 TITLE_FONT = ('arial', 24)
-FONT = ('arial', 10)
+FONT = ('arial', 14)
 
 ITEM_DATA = {
     "weapon": {
@@ -73,6 +74,13 @@ ITEMS_SALE_WEAPONS = {
     "steel-sword" : {"money": 50, "material": {"wood": 10, "raw-iron": 20, "stone": 15}}
 }
 
+MONSTER_DATA = {
+    "goblin": {"health": 25, "attack": 15, "defence": 5, "reward": {"money": 5}},
+    "orc": {"health": 40, "attack": 30, "defence": 10, "reward": {"money": 15}},
+    "slime": {"health": 15, "attack": 10, "defence": 1, "reward": {"money": 2}},
+    "giant": {"health": 50, "attack": 25, "defence": 15, "reward": {"money": 20}}
+}
+
 # Classes
 
 class Player():
@@ -88,8 +96,8 @@ class Player():
             "material": {"wood": 0, "stone": 0, "raw-iron": 0}
         }
         
-        self.equip_weapon = ""
-        self.equip_armor = ""
+        self.equip_weapon = Item("weapon", "none")
+        self.equip_armor = Item("armor", "none")
 
     def add(self, where, what):
         if where in self.inv:
@@ -98,14 +106,16 @@ class Player():
             else:
                 self.inv[where].append(what)
 
+                self.equip(where, what)
+
         update_inv()
         
     def equip(self, where, what):
         
         if where == "weapon":
-            self.equip_weapon = what.name
+            self.equip_weapon = what
         elif where == "armor":
-            self.equip_armor = what.name
+            self.equip_armor = what
 
         self.update_max_health()
             
@@ -114,10 +124,9 @@ class Player():
         update_inv()
 
     def update_max_health(self):
-        equipped_armor = next(
-            (item for item in self.inv["armor"] if item.name == self.equip_armor),
-            None)
-        self.max_health = 150 if equipped_armor and "extra-health" in equipped_armor.effects else 100
+        self.max_health = 150 if "extra-health" in self.equip_armor.effects else 100
+
+        if self.health >= self.max_health: self.health = self.max_health
 
     def use(self, what):
 
@@ -130,7 +139,7 @@ class Player():
             self.health = min(self.max_health, self.health + effect["heal"])
 
         if "defence-buff" in effect:
-            self.temp_defence_buff = effect["defence-buff"]
+            self.temp_defence_buff = effect["defence"]
 
         self.inv["potion"][what] -= 1
         update_inv()
@@ -159,6 +168,12 @@ class Monster():
     def __init__(self):
 
         self.type = random.choice(["goblin", "orc", "slime", "giant"])
+
+        stats = MONSTER_DATA[self.type]
+        self.health = stats["health"]
+        self.attack = stats["attack"]
+        self.defence = stats["defence"]
+        self.reward = stats.get("reward", {})
 
 # Functions
 
@@ -295,12 +310,21 @@ def buy(what):
 
     update_inv()
 
-def back(where):
+def back(where, flee=False):
+
+    if flee:
+        flee_chance = random.randint(0,100)
+        if flee_chance % 2 == 0:
+            failed_label = tk.Label(main, text="You failed to flee!", font= FONT, fg="red")
+            failed_label.place(relx=0.5, rely=0.5, anchor="center")
+            main.after(1000, failed_label.place_forget)
+            return
 
     clear_screen()
     town(where)
     explore_button.pack(side="left", padx=0)
     back_button.pack_forget()
+    flee_button.pack_forget()
 
 def start_screen():
     title = tk.Label(main, text="Game", font= TITLE_FONT)
@@ -344,7 +368,7 @@ def update_inv():
                 inv_label = tk.Label(inv_frame, text=val, font=FONT)
                 inv_label.pack(side= "left")
                 
-                is_equipped = (val.name == player1.equip_weapon) or (val.name == player1.equip_armor)
+                is_equipped = (val is player1.equip_weapon) or (val is player1.equip_armor)
                 
                 if not is_equipped and val.type != "none":
                     equip_button = tk.Button(inv_frame, text="Equip", font=FONT, command= lambda v=val: player1.equip(v.type, v))
@@ -359,6 +383,114 @@ def my_exit():
         
     main.destroy()
     sys.exit()
+
+def player_attack(monster):
+    damage = max(0, player1.equip_weapon.damage - monster.defence)
+    monster.health -= damage
+    return damage
+ 
+def monster_attack(monster):
+    damage = max(0, monster.attack - player1.equip_armor.defence)
+    player1.health -= damage
+    return damage
+ 
+def set_combat_buttons(enabled):
+    state = "normal" if enabled else "disabled"
+    attack_button.config(state=state)
+
+def update_combat_display(monster, health_label):
+    health_label.config(
+        text=f"Your HP: {max(0, player1.health)}   {monster.type.title()} HP: {max(0, monster.health)}"
+    )
+
+def combat(what):
+
+    global flee_button, attack_button, status_label, health_label, player_turn
+
+    clear_screen()
+    explore_button.pack_forget()
+    flee_button.pack(side="right", padx= 0)
+
+    status_label = tk.Label(main, text= f"You have encountered a {what.type}!", font= FONT)
+    status_label.place(relx= 0.5, rely= 0.3, anchor="center")
+
+    health_label = tk.Label(main, text="", font=FONT)
+    health_label.place(relx=0.5, rely=0.35, anchor="center")
+    update_combat_display(what, health_label)
+
+    action_frame = tk.Frame(main)
+    action_frame.place(relx=0.5, rely= 0.7, anchor="center")
+
+    attack_button = tk.Button(action_frame, text= "Attack", font= FONT, command= lambda: take_turn(what))
+    attack_button.pack(side= "left")
+
+    update_inv()
+
+    main.after(600, lambda: resolve_monster_turn(what))
+
+def take_turn(monster):
+ 
+    global player_turn
+ 
+    if not player_turn:
+        return 
+ 
+    player_turn = False
+    set_combat_buttons(False)
+    update_inv()
+ 
+    dmg = player_attack(monster)
+    status_label.config(text=f"You hit the {monster.type} for {dmg} damage!")
+    update_combat_display(monster, health_label)
+ 
+    if monster.health <= 0:
+        end_combat(monster, won=True)
+        return
+ 
+    main.after(500, lambda: resolve_monster_turn(monster))
+
+def resolve_monster_turn(monster):
+ 
+    global player_turn
+ 
+    dmg = monster_attack(monster)
+    status_label.config(text=f"The {monster.type} hits you for {dmg} damage!")
+    update_combat_display(monster, health_label)
+ 
+    if player1.health <= 0:
+        end_combat(monster, won=False)
+        return
+ 
+    player_turn = True
+    set_combat_buttons(True)
+    update_inv()
+
+def end_combat(monster, won):
+ 
+    global player_turn
+ 
+    player_turn = True
+    attack_button.pack_forget()
+    flee_button.pack_forget()
+ 
+    if won:
+        reward = monster.reward
+        if "money" in reward:
+            player1.money += reward["money"]
+        if "material" in reward:
+            for mat, amt in reward["material"].items():
+                player1.inv["material"][mat] += amt
+        result_text = f"You defeated the {monster.type}!"
+    else:
+        player1.health = player1.max_health
+        result_text = f"You were defeated by the {monster.type}..."
+ 
+    status_label.config(text=result_text)
+    health_label.config(text="")
+ 
+    update_inv()
+ 
+    main.after(1500, lambda: back(location))
     
 def explore():
     
@@ -373,10 +505,12 @@ def explore():
         player1.inv["material"]["wood"] += 1
     elif instance % 5 == 0:
         player1.money += 1
+    else:
+        combat(Monster())
         
     if inv.state() == "normal":
         update_inv()
-        
+
 # Main 
 
 bottom_left_frame = tk.Frame(main)
@@ -389,6 +523,8 @@ exit_button = tk.Button(bottom_right_frame, text= "Exit", command= my_exit, font
 exit_button.pack(side="right")
 
 back_button = tk.Button(bottom_right_frame, text= "Back", font= FONT, command= lambda: back(location))
+
+flee_button = tk.Button(bottom_right_frame, text= "Flee", font= FONT, command= lambda: back(location, flee= True))
 
 inventory_button = tk.Button(bottom_left_frame, text="Inventory", command= lambda: [open_inventory(), update_inv()], font=FONT)
 inventory_button.pack(side="left")
