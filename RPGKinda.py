@@ -14,7 +14,7 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 json_path = os.path.join(base_dir, "saves.json")
 
 try:
-    with open(json_path, "r") as file:
+    with open(json_path, 'r') as file:
         data = json.load(file)
 except json.JSONDecodeError as e:
     print("failed to load json file", e)
@@ -114,22 +114,27 @@ class Player():
 
         global data
 
-        if data["saves"] == "none":
-            self.max_health = 100
-            self.health = 100
-            self.money = 0
-            self.inv = {
-                "weapon": [], 
-                "armor": [],
-                "potion": {"health-potion": 0, "greater-health-potion": 0, "defence-potion": 0},
-                "material": {"wood": 0, "stone": 0, "raw-iron": 0}
-            }
+        self.max_health = 100
+        self.health = 100
+        self.money = 0
+        self.inv = {
+            "weapon": [], 
+            "armor": [],
+            "potion": {"health-potion": 0, "greater-health-potion": 0, "defence-potion": 0},
+            "material": {"wood": 0, "stone": 0, "raw-iron": 0}
+        }
+        
 
-        else:
+        if data["saves"] != "none":
             self.max_health = data["max_health"]
             self.health = data["health"]
             self.money = data["money"]
-            self.inv = data["inv"]
+            for i in data["inv"]["weapon"]: 
+                self.inv["weapon"].append(Item("weapon", i))
+            for i in data["inv"]["armor"]: 
+                self.inv["armor"].append(Item("armor", i))
+            self.inv["potion"] = data["inv"]["potion"]
+            self.inv["material"] = data["inv"]["material"]
         
         self.equip_weapon = Item("weapon", "none")
         self.equip_armor = Item("armor", "none")
@@ -178,6 +183,41 @@ class Player():
 
         self.inv["potion"][what] -= 1
         update_inv()
+
+        if update_tracker:
+            update_combat_display(mons, health_label)
+
+    def to_save(self):
+        data = {
+            "saves": "player1",
+            "health": self.health, 
+            "max_health": self.max_health, 
+            "money": self.money, 
+            "inv": {
+                "weapon": [], 
+                "armor": [],
+                "potion": {"health-potion": 0, "greater-health-potion": 0, "defence-potion": 0},
+                "material": {"wood": 0, "stone": 0, "raw-iron": 0}
+            }               
+        }
+
+        for i in self.inv["weapon"]: 
+            data["weapon"].append(i.name)
+        for i in self.inv["armor"]: 
+            data["armor"].append(i.name)
+        data["potion"] = self.inv["inv"]["potion"]
+        data["material"] = self.inv["inv"]["material"]
+
+        try:
+            with open(json_path, 'w') as file:
+                json.dump(data, file, indent= 4)
+                print("saved dat")
+        except json.JSONDecodeError as e:
+            print("failed to load json file", e)
+            data = {"saves": "none"}
+        except FileNotFoundError as e:
+            print("couldn't find json file", e)
+            data = {"saves": "none"}
 
 class Item():
 
@@ -428,26 +468,43 @@ def my_exit():
     main.destroy()
     sys.exit()
 
-def player_attack(monster):
-    damage = max(0, player1.equip_weapon.damage - monster.defence)
-    monster.health -= damage
+def exit_area():
+
+    clear_screen()
+
+    inventory_button.pack_forget()
+    exit_button.pack_forget()
+
+    save_exit_button = tk.Button(main, text= "Save and Exit", font= FONT, command= lambda: [player1.to_save, my_exit])
+    save_exit_button.place(relx=0.4, rely=0.5, anchor="center")
+
+    act_exit_button = tk.Button(main, text= "Exit", font= FONT, command= my_exit)
+    act_exit_button.place(relx= 0.6, rely= 0.5, anchor="center")
+
+def player_attack(what):
+    damage = max(0, player1.equip_weapon.damage - what.defence)
+    what.health -= damage
     return damage
  
-def monster_attack(monster):
-    damage = max(0, monster.attack - player1.equip_armor.defence)
+def monster_attack(what):
+    damage = max(0, what.attack - player1.equip_armor.defence)
     player1.health -= damage
     return damage
  
-def set_combat_buttons(enabled):
-    state = "normal" if enabled else "disabled"
+def set_combat_buttons(yes):
+    state = "normal" if yes else "disabled"
     attack_button.config(state=state)
 
-def update_combat_display(monster, health_label):
+def update_combat_display(what, health_label):
     health_label.config(
-        text=f"Your HP: {max(0, player1.health)}   {monster.type.title()} HP: {max(0, monster.health)}"
+        text=f"Your HP: {max(0, player1.health)}   {what.type.title()} HP: {max(0, what.health)}"
     )
 
 def combat(what):
+
+    global update_tracker 
+
+    update_tracker = True
 
     global flee_button, attack_button, status_label, health_label
 
@@ -515,7 +572,7 @@ def monster_turn(what):
 
 def end_combat(what, won):
  
-    global turn
+    global turn, update_tracker
  
     turn = True
     attack_button.pack_forget()
@@ -538,6 +595,8 @@ def end_combat(what, won):
     health_label.config(text="")
  
     update_inv()
+
+    update_tracker = False
  
     main.after(1500, lambda: back(location))
     
@@ -568,7 +627,7 @@ bottom_left_frame.place(relx=0, rely=1, anchor="sw")
 bottom_right_frame = tk.Frame(main)
 bottom_right_frame.place(relx= 1, rely= 1, anchor="se")
 
-exit_button = tk.Button(bottom_right_frame, text= "Exit", command= my_exit, font= FONT)
+exit_button = tk.Button(bottom_right_frame, text= "Exit", command= exit_area, font= FONT)
 exit_button.pack(side="right")
 
 back_button = tk.Button(bottom_right_frame, text= "Back", font= FONT, command= lambda: back(location))
