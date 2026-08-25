@@ -1,13 +1,20 @@
 {
-    
     "saves": "player1",
-    "health": 100, 
-    "max_health": 100, 
-    "money": 0, 
+    "health": 100,
+    "max_health": 100,
+    "money": 0,
     "inv": {
-        "weapon": [], 
-        "armor": [], 
-        "potion": {"health-potion": 0, "greater-health-potion": 0, "defence-potion": 0}, 
-        "material": {"wood": 0, "stone": 0, "raw-iron": 0}
+        "weapon": [],
+        "armor": [],
+        "potion": {
+            "health-potion": 0,
+            "greater-health-potion": 0,
+            "defence-potion": 0
+        },
+        "material": {
+            "wood": 0,
+            "stone": 0,
+            "raw-iron": 0
+        }
     }
 }

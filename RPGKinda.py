@@ -44,6 +44,7 @@ inv.withdraw()
 location = ""
 turn = True
 mons = None
+update_tracker = False
 
 TITLE_FONT = ('arial', 24)
 FONT = ('arial', 14)
@@ -170,6 +171,8 @@ class Player():
 
     def use(self, what):
 
+        global update_tracker
+
         if self.inv["potion"].get(what, 0) < 1:
             return
 
@@ -194,24 +197,16 @@ class Player():
             "max_health": self.max_health, 
             "money": self.money, 
             "inv": {
-                "weapon": [], 
-                "armor": [],
-                "potion": {"health-potion": 0, "greater-health-potion": 0, "defence-potion": 0},
-                "material": {"wood": 0, "stone": 0, "raw-iron": 0}
+                "weapon": [i.name for i in self.inv["weapon"]],
+                "armor": [i.name for i in self.inv["armor"]], 
+                "potion": self.inv["potion"],
+                "material": self.inv["material"]
             }               
         }
-
-        for i in self.inv["weapon"]: 
-            data["weapon"].append(i.name)
-        for i in self.inv["armor"]: 
-            data["armor"].append(i.name)
-        data["potion"] = self.inv["inv"]["potion"]
-        data["material"] = self.inv["inv"]["material"]
 
         try:
             with open(json_path, 'w') as file:
                 json.dump(data, file, indent= 4)
-                print("saved dat")
         except json.JSONDecodeError as e:
             print("failed to load json file", e)
             data = {"saves": "none"}
@@ -276,8 +271,9 @@ def begin_game():
     clear_screen()
 
     global explore_button
+
+    wipe_save_btn.destroy()
     
-    explore_button = tk.Button(bottom_left_frame, text="Explore", font= FONT, command= explore)
     explore_button.pack(side="left", padx=0)
 
     town("grimsby")
@@ -410,12 +406,68 @@ def back(where, flee=False, what= None):
     back_button.pack_forget()
     flee_button.pack_forget()
 
+def clean_save():
+
+    data = {
+        "saves": "player1",
+        "health": 100, 
+        "max_health": 100, 
+        "money": 0, 
+        "inv": {
+            "weapon": [], 
+            "armor": [],
+            "potion": {"health-potion": 0, "greater-health-potion": 0, "defence-potion": 0},
+            "material": {"wood": 0, "stone": 0, "raw-iron": 0}
+        }               
+    }
+
+    try:
+        with open(json_path, 'w') as file:
+            json.dump(data, file, indent= 4)
+    except json.JSONDecodeError as e:
+        print("failed to load json file", e)
+        data = {"saves": "none"}
+    except FileNotFoundError as e:
+        print("couldn't find json file", e)
+        data = {"saves": "none"}
+
+    main.after(100, start_screen)
+
+def you_sure():
+
+    clear_screen()
+
+    inventory_button.pack_forget()
+    exit_button.pack_forget()
+    explore_button.pack_forget()
+    wipe_save_btn.pack_forget()
+
+    label = tk.Label(main, text= "Are you sure?", font=FONT)
+    label.place(relx=0.5, rely= 0.4, anchor="center")
+
+    frame = tk.Frame(main)
+    frame.place(relx=0.5, rely=0.5, anchor="center")
+
+    clear_save = tk.Button(frame, text= "Clear Save", font=FONT, command= clean_save)
+    clear_save.pack(side= "left", padx= 5)
+
+    keep_save = tk.Button(frame, text= "Keep Save", font=FONT, command= start_screen)
+    keep_save.pack(side= "right", padx= 5)
+
 def start_screen():
+
+    global bottom_right_frame
+
+    clear_screen()
+
+    inventory_button.pack(side="left")
+    exit_button.pack(side="right")
+        
     title = tk.Label(main, text="Game", font= TITLE_FONT)
     title.place(relx= 0.5, rely= 0.3, anchor="center")
     title_start_button = tk.Button(main, text="Start", command= begin_game, font= FONT)
     title_start_button.place(relx= 0.5, rely= 0.7, anchor="center")
-    
+
 def open_inventory():
     
     global inv
@@ -474,8 +526,10 @@ def exit_area():
 
     inventory_button.pack_forget()
     exit_button.pack_forget()
+    explore_button.pack_forget()
+    wipe_save_btn.pack_forget()
 
-    save_exit_button = tk.Button(main, text= "Save and Exit", font= FONT, command= lambda: [player1.to_save, my_exit])
+    save_exit_button = tk.Button(main, text= "Save and Exit", font= FONT, command= lambda: [player1.to_save(), my_exit()])
     save_exit_button.place(relx=0.4, rely=0.5, anchor="center")
 
     act_exit_button = tk.Button(main, text= "Exit", font= FONT, command= my_exit)
@@ -634,11 +688,18 @@ back_button = tk.Button(bottom_right_frame, text= "Back", font= FONT, command= l
 
 flee_button = tk.Button(bottom_right_frame, text= "Flee", font= FONT, command= lambda: back(location, flee= True, what= mons))
 
+explore_button = tk.Button(bottom_left_frame, text="Explore", font= FONT, command= explore)
+
+wipe_save_btn = tk.Button(bottom_right_frame, text= "Clear Save", font= FONT, command= you_sure)
+wipe_save_btn.pack(side= "right", padx=0)
+
 inventory_button = tk.Button(bottom_left_frame, text="Inventory", command= lambda: [open_inventory(), update_inv()], font=FONT)
 inventory_button.pack(side="left")
 
 player1 = Player()
-player1.add("weapon", Item("weapon", "fists"))
+
+if not any(i.name == "fists" for i in player1.inv["weapon"]):
+    player1.add("weapon", Item("weapon", "fists"))
 
 start_screen()
 
