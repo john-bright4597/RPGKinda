@@ -5,6 +5,23 @@
 import tkinter as tk
 import sys
 import random
+import json
+import os
+
+# json data handling
+
+base_dir = os.path.dirname(os.path.abspath(__file__))
+json_path = os.path.join(base_dir, "saves.json")
+
+try:
+    with open(json_path, "r") as file:
+        data = json.load(file)
+except json.JSONDecodeError as e:
+    print("failed to load json file", e)
+    data = {"saves": "none"}
+except FileNotFoundError as e:
+    print("couldn't find json file", e)
+    data = {"saves": "none"}
 
 # Window creation
 
@@ -94,15 +111,25 @@ MONSTER_DATA = {
 class Player():
 
     def __init__(self):
-        self.max_health = 100
-        self.health = 100
-        self.money = 0
-        self.inv = {
-            "weapon": [], 
-            "armor": [],
-            "potion": {"health-potion": 0, "greater-health-potion": 0, "defence-potion": 0},
-            "material": {"wood": 0, "stone": 0, "raw-iron": 0}
-        }
+
+        global data
+
+        if data["saves"] == "none":
+            self.max_health = 100
+            self.health = 100
+            self.money = 0
+            self.inv = {
+                "weapon": [], 
+                "armor": [],
+                "potion": {"health-potion": 0, "greater-health-potion": 0, "defence-potion": 0},
+                "material": {"wood": 0, "stone": 0, "raw-iron": 0}
+            }
+
+        else:
+            self.max_health = data["max_health"]
+            self.health = data["health"]
+            self.money = data["money"]
+            self.inv = data["inv"]
         
         self.equip_weapon = Item("weapon", "none")
         self.equip_armor = Item("armor", "none")
