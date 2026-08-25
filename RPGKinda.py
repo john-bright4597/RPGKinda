@@ -408,6 +408,8 @@ def back(where, flee=False, what= None):
 
 def clean_save():
 
+    global data, player1
+
     data = {
         "saves": "player1",
         "health": 100, 
@@ -431,6 +433,11 @@ def clean_save():
         print("couldn't find json file", e)
         data = {"saves": "none"}
 
+    player1 = Player()
+    if not any(i.name == "fists" for i in player1.inv["weapon"]):
+        player1.add("weapon", Item("weapon", "fists"))
+
+    inv.after(100, update_inv)
     main.after(100, start_screen)
 
 def you_sure():
