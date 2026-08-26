@@ -648,8 +648,8 @@ def end_combat(what, won):
                 player1.inv["material"][mat] += amt
         result_text = f"You defeated the {what.type}!"
     else:
-        result_text = f"You were defeated by the {what.type}..."
         clear_screen()
+        exit_button.config(command= lambda: [clean_save(), my_exit()])
         return
  
     status_label.config(text=result_text)
