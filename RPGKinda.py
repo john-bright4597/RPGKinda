@@ -307,6 +307,9 @@ def shop(where, which):
 
     if where == "grimsby":
         if which == "general":
+
+            update_inv(True)
+
             name = tk.Label(main, text= "Mud & Dirt Co.", font= TITLE_FONT)
             name.place(relx= 0.5, rely= 0.2, anchor= "center")
 
@@ -480,7 +483,7 @@ def open_inventory():
     global inv
     inv.deiconify()
     
-def update_inv():
+def update_inv(in_shop = False):
     
     global inv
     
@@ -500,6 +503,10 @@ def update_inv():
                 inv_label = tk.Label(inv_frame, text=f'{sub_key.replace("-", " ").title()}: {sub_val}', font=FONT)
                 inv_label.pack(side="left")
 
+                if key == "material" and in_shop:
+                    sell_button = tk.Button(inv_frame, text= "Sell", font=FONT, command=lambda s=sub_key: sell(s))
+                    sell_button.pack(side= "left", padx= 5)
+
                 if key == "potion" and sub_val > 0:
                     use_button = tk.Button(inv_frame, text="Use", font=FONT, command=lambda s=sub_key: player1.use(s))
                     use_button.pack(side="left", padx=5)
@@ -516,6 +523,16 @@ def update_inv():
                 if not is_equipped and val.type != "none":
                     equip_button = tk.Button(inv_frame, text="Equip", font=FONT, command= lambda v=val: player1.equip(v.type, v))
                     equip_button.pack(side="left", padx = 5)
+
+def sell(what):
+
+    global player1
+
+    if what in player1.inv["material"] and player1.inv["material"][what] > 0:
+        player1.inv["material"][what] -= 1
+        player1.money += ITEMS_SALE_MATERIALS[what]
+
+    update_inv(True)
 
 def my_exit():
     
@@ -648,7 +665,7 @@ def end_combat(what, won):
                 player1.inv["material"][mat] += amt
         result_text = f"You defeated the {what.type}!"
     else:
-        clear_screen()
+        main.after(250, clear_screen())
         exit_button.config(command= lambda: [clean_save(), my_exit()])
         return
  
@@ -674,9 +691,11 @@ def explore():
         player1.inv["material"]["wood"] += 1
     elif instance % 5 == 0:
         player1.money += 1
-    else:
+    elif instance % 2 == 1 and instance < 50000:
         combat(Monster())
-        
+    else:
+        player1.inv["material"][random.choice(["stone", "wood", "raw-iron"])] += 1
+
     if inv.state() == "normal":
         update_inv()
 
