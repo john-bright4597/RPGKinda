@@ -6,3 +6,5 @@ Note: Game file name change from "game.py" to "RPGKinda.py"
  - Working on adding saving
 
 8/25/26: Successfully made saving reading and writing from a .json file. Also added functions to wipe a save.
+
+9/10/26: I now officially count this as a Alpha Build of the game. There is still more to come for this version of the game, and I'm currently working on a graphical version of the game.
