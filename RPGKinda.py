@@ -45,6 +45,7 @@ location = ""
 turn = True
 mons = None
 update_tracker = False
+in_inv = False
 
 TITLE_FONT = ('arial', 24)
 FONT = ('arial', 14)
@@ -301,14 +302,16 @@ def town(what):
 
 def shop(where, which):
 
-    global back_button
+    global back_button, in_inv
     clear_screen()
     back_button.pack(side="right", padx= 0)
+
+    in_inv = True
 
     if where == "grimsby":
         if which == "general":
 
-            update_inv(True)
+            update_inv()
 
             name = tk.Label(main, text= "Mud & Dirt Co.", font= TITLE_FONT)
             name.place(relx= 0.5, rely= 0.2, anchor= "center")
@@ -394,6 +397,8 @@ def buy(what):
 
 def back(where, flee=False, what= None):
 
+    global in_inv
+
     if flee:
         flee_chance = random.randint(0,100)
         if flee_chance % 2 == 0:
@@ -402,6 +407,9 @@ def back(where, flee=False, what= None):
             main.after(1000, failed_label.destroy)
             monster_turn(what)
             return
+
+    in_inv=False
+    update_inv()
 
     clear_screen()
     town(where)
@@ -488,6 +496,9 @@ def update_inv(in_shop = False):
     global inv
     
     clear_screen("inv")
+
+    if in_inv: 
+        in_shop = True
     
     money_label = tk.Label(inv, text= f"Money: {player1.money}", font= FONT)
     money_label.pack(pady=2)
@@ -532,7 +543,7 @@ def sell(what):
         player1.inv["material"][what] -= 1
         player1.money += ITEMS_SALE_MATERIALS[what]
 
-    update_inv(True)
+    update_inv()
 
 def my_exit():
     
