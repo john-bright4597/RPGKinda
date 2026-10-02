@@ -82,11 +82,11 @@ ITEMS_SALE_POTION = {
     "defence-potion": 25
 }
 
-ITEMS_SALE_MATERIALS = {
-    "wood" : 2,
-    "stone" : 2,
-    "raw-iron" : 6
-}
+#ITEMS_SALE_MATERIALS = {
+#    "wood" : 2,
+#    "stone" : 2,
+#    "raw-iron" : 6
+#}
 
 ITEMS_SALE_WEAPONS = {
     "wooden-sword": {"money": 15, "material": {"wood": 20}},
@@ -102,11 +102,25 @@ MONSTER_RANDOM ={
 }
 
 MONSTER_DATA = {
-    "goblin": {"health": random.randint(20,30), "attack": random.randint(MONSTER_RANDOM["goblin"]["attack"]["l"], MONSTER_RANDOM["goblin"]["attack"]["h"]), "defence": random.randint(1,10), "reward": {"money": 10}},
-    "orc": {"health": random.randint(20,40), "attack": random.randint(MONSTER_RANDOM["orc"]["attack"]["l"],MONSTER_RANDOM["orc"]["attack"]["h"]), "defence": random.randint(5,15), "reward": {"money": 20}},
-    "slime": {"health": random.randint(5,20), "attack": random.randint(MONSTER_RANDOM["slime"]["attack"]["l"],MONSTER_RANDOM["slime"]["attack"]["h"]), "defence": random.randint(0,5), "reward": {"money": 5}},
-    "giant": {"health": random.randint(40,50), "attack": random.randint(MONSTER_RANDOM["giant"]["attack"]["l"],MONSTER_RANDOM["giant"]["attack"]["h"]), "defence": random.randint(10,20), "reward": {"money": 40}}
+    "goblin": {"health": random.randint(20,30), "attack": random.randint(MONSTER_RANDOM["goblin"]["attack"]["l"], MONSTER_RANDOM["goblin"]["attack"]["h"]), "defence": random.randint(1,10), "reward": {"money": 10, "exp": random.randint(5, 20)}},
+    "orc": {"health": random.randint(20,40), "attack": random.randint(MONSTER_RANDOM["orc"]["attack"]["l"],MONSTER_RANDOM["orc"]["attack"]["h"]), "defence": random.randint(5,15), "reward": {"money": 20, "exp": random.randint(15, 35)}},
+    "slime": {"health": random.randint(5,20), "attack": random.randint(MONSTER_RANDOM["slime"]["attack"]["l"],MONSTER_RANDOM["slime"]["attack"]["h"]), "defence": random.randint(0,5), "reward": {"money": 5, "exp": random.randint(1, 10)}},
+    "giant": {"health": random.randint(40,50), "attack": random.randint(MONSTER_RANDOM["giant"]["attack"]["l"],MONSTER_RANDOM["giant"]["attack"]["h"]), "defence": random.randint(10,20), "reward": {"money": 40, "exp": random.randint(40, 60)}}
 }
+
+MATERIAL_DATA = {
+#   name         sell/buy price,  sold in shop?,    explore drop weight
+    "wood":         {"price": 2,  "in_shop": True,  "find_weight": 5},
+    "stone":        {"price": 2,  "in_shop": True,  "find_weight": 5},
+    "raw-iron":     {"price": 6,  "in_shop": True,  "find_weight": 2},
+    "eldenite":     {"price": 20, "in_shop": False, "find_weight": 0},
+    "kenvilite":    {"price": 25, "in_shop": False, "find_weight": 0},
+    "dragon-scale": {"price": 60, "in_shop": False, "find_weight": 0},
+}
+
+MATERIAL_LIST = list(MATERIAL_DATA)
+
+ITEMS_SALE_MATERIALS = {m: d["price"] for m, d in MATERIAL_DATA.items() if d["in_shop"]}
 
 # Classes
 
@@ -114,43 +128,61 @@ class Player():
 
     def __init__(self):
 
-        global data
+        global data, exp_to_next_level
 
         self.max_health = 100
         self.health = 100
         self.money = 0
-        self.inv = {
-            "weapon": [], 
-            "armor": [],
-            "potion": {"health-potion": 0, "greater-health-potion": 0, "defence-potion": 0},
-            "material": {"wood": 0, "stone": 0, "raw-iron": 0}
-        }
-        
+        self.inv = default_inventory()
+        self.discovered = {"potion": set(), "material": set()}
+        self.level = 0
+        self.exp = 0        
 
         if data["saves"] != "none":
             self.max_health = data["max_health"]
             self.health = data["health"]
             self.money = data["money"]
+            self.level = data["level"]
+            self.exp = data["exp"]
+            self.discovered = data["discovered"]
             for i in data["inv"]["weapon"]: 
                 self.inv["weapon"].append(Item("weapon", i))
             for i in data["inv"]["armor"]: 
                 self.inv["armor"].append(Item("armor", i))
             self.inv["potion"] = data["inv"]["potion"]
             self.inv["material"] = data["inv"]["material"]
-        
+
+        for cat, names in data.get("discovered", {}).items():
+            if cat in self.discovered:
+                self.discovered[cat].update(n for n in names if n in self.inv[cat])
+        self.refresh_discovered()
+
+        exp_to_next_level = 10 * 1.5 ** self.level
+
         self.equip_weapon = Item("weapon", "none")
         self.equip_armor = Item("armor", "none")
 
-    def add(self, where, what):
+    def add(self, where, what, amount= 1):
         if where in self.inv:
             if where == "material" or where == "potion":
-                self.inv[where][what] += 1
+                self.inv[where][what] += amount
             else:
                 self.inv[where].append(what)
 
-                self.equip(where, what)
+                current = self.equip_weapon if where == "weapon" else self.equip_armor
+                if (what.damage, what.defence) > (current.damage, current.defence):
+                    self.equip(where, what)
 
         update_inv()
+
+    def level_up(self):
+
+        global exp_to_next_level
+
+        if self.exp >= exp_to_next_level:
+            self.level += 1
+            self.exp -= exp_to_next_level
+            exp_to_next_level *= 1.5
         
     def equip(self, where, what):
         
@@ -191,12 +223,19 @@ class Player():
         if update_tracker:
             update_combat_display(mons, health_label)
 
+    def refresh_discovered(self):
+        for cat in self.discovered:
+            self.discovered[cat].update(n for n, c in self.inv[cat].items() if c > 0)
+
     def to_save(self):
         data = {
             "saves": "player1",
             "health": self.health, 
             "max_health": self.max_health, 
-            "money": self.money, 
+            "money": self.money,
+            "discovered": {cat: sorted(names) for cat, names in self.discovered.items()},
+            "level": self.level,
+            "exp": self.exp, 
             "inv": {
                 "weapon": [i.name for i in self.inv["weapon"]],
                 "armor": [i.name for i in self.inv["armor"]], 
@@ -275,7 +314,7 @@ def begin_game():
 
     wipe_save_btn.destroy()
     
-    explore_button.pack(side="left", padx=0)
+    explore_button.pack(side="right", padx=0)
 
     town("grimsby")
     
@@ -306,10 +345,10 @@ def shop(where, which):
     clear_screen()
     back_button.pack(side="right", padx= 0)
 
-    in_inv = True
-
     if where == "grimsby":
         if which == "general":
+
+            in_inv = True
 
             update_inv()
 
@@ -397,7 +436,7 @@ def buy(what):
 
 def back(where, flee=False, what= None):
 
-    global in_inv
+    global in_inv, update_tracker
 
     if flee:
         flee_chance = random.randint(0,100)
@@ -409,13 +448,23 @@ def back(where, flee=False, what= None):
             return
 
     in_inv=False
+    update_tracker = False
     update_inv()
+    exit_button.config(state="normal")
 
     clear_screen()
     town(where)
-    explore_button.pack(side="left", padx=0)
+    explore_button.pack(side="right", padx=0)
     back_button.pack_forget()
     flee_button.pack_forget()
+
+def default_inventory():
+    return {
+        "weapon": [],
+        "armor": [],
+        "potion": {p: 0 for p in POTION_DATA},
+        "material": {m: 0 for m in MATERIAL_DATA},
+    }
 
 def clean_save():
 
@@ -426,12 +475,7 @@ def clean_save():
         "health": 100, 
         "max_health": 100, 
         "money": 0, 
-        "inv": {
-            "weapon": [], 
-            "armor": [],
-            "potion": {"health-potion": 0, "greater-health-potion": 0, "defence-potion": 0},
-            "material": {"wood": 0, "stone": 0, "raw-iron": 0}
-        }               
+        "inv": default_inventory()              
     }
 
     try:
@@ -502,8 +546,17 @@ def update_inv(in_shop = False):
     
     money_label = tk.Label(inv, text= f"Money: {player1.money}", font= FONT)
     money_label.pack(pady=2)
+
+    level_label = tk.Label(inv, text=f"Level {player1.level}  EXP: {int(player1.exp)}/{int(exp_to_next_level)}", font=FONT)
+    level_label.pack(pady=2)
     
+    player1.refresh_discovered()
+
     for key, value in player1.inv.items():
+        if isinstance(value, dict) and key in player1.discovered:
+            value = {k: v for k, v in value.items() if k in player1.discovered[key]}
+            if not value:
+                continue
         key_label = tk.Label(inv, text=f' <-- {key} -->', font=FONT)
         key_label.pack(pady=2)
         if isinstance(value, dict):
@@ -522,7 +575,7 @@ def update_inv(in_shop = False):
                     use_button = tk.Button(inv_frame, text="Use", font=FONT, command=lambda s=sub_key: player1.use(s))
                     use_button.pack(side="left", padx=5)
         else:
-            for val in value:
+              for val in sorted(value, key=lambda i: (i.damage, i.defence)):
                 inv_frame = tk.Frame(inv)
                 inv_frame.pack(pady=2)
                   
@@ -540,8 +593,9 @@ def sell(what):
     global player1
 
     if what in player1.inv["material"] and player1.inv["material"][what] > 0:
+        price = MATERIAL_DATA[what]["price"]
         player1.inv["material"][what] -= 1
-        player1.money += ITEMS_SALE_MATERIALS[what]
+        player1.money += max(0,price - random.randint(0, price // 2))
 
     update_inv()
 
@@ -557,18 +611,28 @@ def my_exit():
 
 def exit_area():
 
+    global in_inv
+
     clear_screen()
 
     inventory_button.pack_forget()
     exit_button.pack_forget()
     explore_button.pack_forget()
     wipe_save_btn.pack_forget()
+    flee_button.pack_forget()
+    back_button.pack_forget()
+
+    in_inv = False
+    update_inv()
 
     save_exit_button = tk.Button(main, text= "Save and Exit", font= FONT, command= lambda: [player1.to_save(), my_exit()])
     save_exit_button.place(relx=0.4, rely=0.5, anchor="center")
 
     act_exit_button = tk.Button(main, text= "Exit", font= FONT, command= my_exit)
     act_exit_button.place(relx= 0.6, rely= 0.5, anchor="center")
+
+    cancel_button = tk.Button(main, text= "Cancel", font= FONT, command= lambda: [back(location), exit_button.pack(side="right"), inventory_button.pack(side="left")])
+    cancel_button.place(relx= 0.5, rely= 0.6, anchor="center")
 
 def player_attack(what):
     damage = max(0, player1.equip_weapon.damage - what.defence)
@@ -600,6 +664,7 @@ def combat(what):
     clear_screen()
     explore_button.pack_forget()
     flee_button.pack(side="right", padx= 0)
+    exit_button.config(state="disabled")
 
     status_label = tk.Label(main, text= f"You have encountered a {what.type}!", font= FONT)
     status_label.place(relx= 0.5, rely= 0.3, anchor="center")
@@ -675,9 +740,15 @@ def end_combat(what, won):
             for mat, amt in reward["material"].items():
                 player1.inv["material"][mat] += amt
         result_text = f"You defeated the {what.type}!"
+        if "exp" in reward:
+            player1.exp += reward["exp"]
+
+            while player1.exp >= exp_to_next_level:
+                player1.level_up()
+
     else:
         main.after(250, clear_screen())
-        exit_button.config(command= lambda: [clean_save(), my_exit()])
+        exit_button.config(state="normal", command= lambda: [clean_save(), my_exit()])
         return
  
     status_label.config(text=result_text)
@@ -688,24 +759,32 @@ def end_combat(what, won):
     update_tracker = False
  
     main.after(1500, lambda: back(location))
-    
+
+def gather_material():
+
+    names = [m for m, d in MATERIAL_DATA.items() if d["find_weight"] > 0]
+    weights = [MATERIAL_DATA[m]["find_weight"] for m in names]
+    player1.add("material", random.choices(names, weights)[0])  
+
 def explore():
     
-    instance = random.randint(0,100000)
+    instance = random.randint(0,1000000)
     
-    if instance == 56469:
+    if instance == 564609:
         player1.add("weapon", Item("weapon", "dev-sword"))
+        player1.add("armor", Item("armor", "dev-armor"))
         return
-    if instance >= 50000 and instance % 2 == 0:
-        player1.inv["material"]["stone"] += 1
-    elif instance < 50000 and instance % 2 == 0:
-        player1.inv["material"]["wood"] += 1
-    elif instance % 5 == 0:
+    if instance % 5 == 0:
         player1.money += 1
-    elif instance % 2 == 1 and instance < 50000:
+    elif instance % 2 == 1 and instance < player1.level * 50000:
         combat(Monster())
     else:
-        player1.inv["material"][random.choice(["stone", "wood", "raw-iron"])] += 1
+        gather_material()
+
+    player1.exp += random.randint(1, int(exp_to_next_level * 0.1))
+
+    while player1.exp >= exp_to_next_level:
+        player1.level_up()
 
     if inv.state() == "normal":
         update_inv()
