@@ -86,3 +86,9 @@ iframe{
     margin-left: auto;
     margin-right: auto;
 }
+
+.center4{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
