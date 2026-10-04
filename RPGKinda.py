@@ -27,9 +27,11 @@ except FileNotFoundError as e:
 
 main = tk.Tk()
 main.geometry("800x600")
-main.title("Game")
+main.title("RPGKinda")
 main.minsize(width=800, height=600)
 main.maxsize(width=800, height=600)
+main.config(background= "#FFFFFF")
+main.tk_setPalette(background="#FFFFFF", foreground="#2B2B2B")
 
 inv = tk.Toplevel(main)
 inv.title("Inventory")
@@ -46,6 +48,7 @@ turn = True
 mons = None
 update_tracker = False
 in_inv = False
+first_time_GS = True
 
 TITLE_FONT = ('arial', 24)
 FONT = ('arial', 14)
@@ -121,6 +124,12 @@ MATERIAL_DATA = {
 MATERIAL_LIST = list(MATERIAL_DATA)
 
 ITEMS_SALE_MATERIALS = {m: d["price"] for m, d in MATERIAL_DATA.items() if d["in_shop"]}
+
+IMAGES = {
+    "gs": r"Assets\GS_Keep.png",
+    "bs": r"Assets\BS_Keep.png",
+    "sm": r"Assets\S_Man.png"
+}
 
 # Classes
 
@@ -347,6 +356,18 @@ def shop(where, which):
 
     if where == "grimsby":
         if which == "general":
+
+            global first_time_GS
+
+            """
+            if first_time_GS:
+                speech_text("Hello, Welcome to Mud & Dirt Co.")
+                speech_text("The finest general store this side of where were at.")
+                first_time_GS = False
+            """
+
+            speech_box("Hello, welcome to Mud & Dirt Co.", "gs")
+            speech_box("The finest general store all ofthe king's land", "gs")
 
             in_inv = True
 
@@ -788,6 +809,33 @@ def explore():
 
     if inv.state() == "normal":
         update_inv()
+
+def unbind(Event= None):
+    global speech_label
+    speech_label.destroy()
+    main.unbind("<Return>")
+
+def speech_text(text, frame):
+    global speech_label
+    speech_label = tk.Label(frame,text= "", font=FONT)
+    speech_label.place(relx=0.5,rely=0.5,anchor="center")
+    for i in range(len(text)):
+        main.after(50 * i, lambda i=i: speech_label.config(text= text[:i + 1]))
+    main.bind("<Return>", unbind)
+
+    main.wait_window(speech_label)
+
+def speech_box(text, where):
+
+    frame = tk.Frame(main)
+    frame.place(relx=0,rely=0, relheight= .15, relwidth= 1, anchor="nw")
+
+    logo = tk.PhotoImage(file= os.path.join(base_dir, IMAGES[where]))
+
+    img_lbl = tk.Label(frame, image=logo)
+    img_lbl.place(relx=0.2, rely=0.5, anchor="center")
+
+    speech_text(text, frame)
 
 # Main 
 
