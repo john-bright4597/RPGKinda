@@ -3,10 +3,12 @@
 # Imports
 
 import tkinter as tk
+from tkinter import ttk
 import sys
 import random
 import json
 import os
+import functools
 
 # json data handling
 
@@ -38,17 +40,34 @@ inv.title("Inventory")
 inv.geometry("300x600")
 inv.maxsize(width=300, height=600)
 inv.minsize(width=300, height=600)
+inv.tk_setPalette(background="#FFFFFF", foreground="#2B2B2B")
 inv.protocol("WM_DELETE_WINDOW", inv.withdraw)
 inv.withdraw()
 
 # Constants
 
-location = ""
+location = "main-menu"
 turn = True
 mons = None
 update_tracker = False
 in_inv = False
 first_time_GS = True
+exit_area_ind = False
+unbound= None
+speech_jobs = []
+
+style = ttk.Style()
+
+style.configure("TScale", 
+    borderwidth=5, 
+    relief="solid", 
+    background="#FFFFFF")
+
+#   SETTINGS
+
+#text_scroll_speed = 50
+
+text_scroll_speed = tk.IntVar(value=50)
 
 TITLE_FONT = ('arial', 24)
 FONT = ('arial', 14)
@@ -302,7 +321,19 @@ class Monster():
 
         self.attack = random.randint(MONSTER_RANDOM[self.type]["attack"]["l"],MONSTER_RANDOM[self.type]["attack"]["h"])
 
+class ExitInterrupt(Exception):
+    pass
+
 # Functions
+
+def interruptible(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except ExitInterrupt:
+            pass
+    return wrapper
 
 def clear_screen(what= "main"):
     
@@ -322,6 +353,7 @@ def begin_game():
     global explore_button
 
     wipe_save_btn.destroy()
+    settings_button.destroy()
     
     explore_button.pack(side="right", padx=0)
 
@@ -348,6 +380,7 @@ def town(what):
     black_smith_button = tk.Button(town_frame, text= "Black Smith", font= FONT, command= lambda: [shop(what, "black-smith"), explore_button.pack_forget()])
     black_smith_button.pack(side="left", padx= 5)
 
+@interruptible
 def shop(where, which):
 
     global back_button, in_inv
@@ -359,15 +392,10 @@ def shop(where, which):
 
             global first_time_GS
 
-            """
             if first_time_GS:
-                speech_text("Hello, Welcome to Mud & Dirt Co.")
-                speech_text("The finest general store this side of where were at.")
+                say("Hello, welcome to Mud & Dirt Co.",
+                "The finest general store all of the king's land", where="gs")
                 first_time_GS = False
-            """
-
-            speech_box("Hello, welcome to Mud & Dirt Co.", "gs")
-            speech_box("The finest general store all ofthe king's land", "gs")
 
             in_inv = True
 
@@ -457,7 +485,9 @@ def buy(what):
 
 def back(where, flee=False, what= None):
 
-    global in_inv, update_tracker
+    global in_inv, update_tracker, exit_area_ind
+
+    exit_area_ind = False
 
     if flee:
         flee_chance = random.randint(0,100)
@@ -467,6 +497,12 @@ def back(where, flee=False, what= None):
             main.after(1000, failed_label.destroy)
             monster_turn(what)
             return
+
+    if where == "main-menu":
+        clear_screen()
+        start_screen()
+        back_button.pack_forget()
+        return
 
     in_inv=False
     update_tracker = False
@@ -496,6 +532,9 @@ def clean_save():
         "health": 100, 
         "max_health": 100, 
         "money": 0, 
+        "level": 0,
+        "exp": 0,
+        "discovered": {"potion": set(), "material": set()},
         "inv": default_inventory()              
     }
 
@@ -543,8 +582,12 @@ def start_screen():
 
     clear_screen()
 
+    clear_buttons()
+
     inventory_button.pack(side="left")
     exit_button.pack(side="right")
+    wipe_save_btn.pack(side= "right")
+    settings_button.pack(side="right")
         
     title = tk.Label(main, text="Game", font= TITLE_FONT)
     title.place(relx= 0.5, rely= 0.3, anchor="center")
@@ -632,19 +675,21 @@ def my_exit():
 
 def exit_area():
 
-    global in_inv
+    global in_inv, exit_area_ind
 
     clear_screen()
+    clear_buttons()
+    clear_screen()
 
-    inventory_button.pack_forget()
-    exit_button.pack_forget()
-    explore_button.pack_forget()
-    wipe_save_btn.pack_forget()
-    flee_button.pack_forget()
-    back_button.pack_forget()
+    exit_area_ind = True
+
+    cancel_speech()
 
     in_inv = False
     update_inv()
+
+    if location == "main-menu":
+        my_exit()
 
     save_exit_button = tk.Button(main, text= "Save and Exit", font= FONT, command= lambda: [player1.to_save(), my_exit()])
     save_exit_button.place(relx=0.4, rely=0.5, anchor="center")
@@ -810,32 +855,95 @@ def explore():
     if inv.state() == "normal":
         update_inv()
 
-def unbind(Event= None):
-    global speech_label
-    speech_label.destroy()
-    main.unbind("<Return>")
+def cancel_speech():
+    for job in speech_jobs:
+        main.after_cancel(job)
+    speech_jobs.clear()
 
-def speech_text(text, frame):
-    global speech_label
-    speech_label = tk.Label(frame,text= "", font=FONT)
-    speech_label.place(relx=0.5,rely=0.5,anchor="center")
-    for i in range(len(text)):
-        main.after(50 * i, lambda i=i: speech_label.config(text= text[:i + 1]))
-    main.bind("<Return>", unbind)
-
-    main.wait_window(speech_label)
+    if unbound is not None:
+        unbound.set(True)
 
 def speech_box(text, where):
+    global unbound, speech_jobs
 
-    frame = tk.Frame(main)
-    frame.place(relx=0,rely=0, relheight= .15, relwidth= 1, anchor="nw")
+    unbound = tk.BooleanVar(value=False)
+    speech_jobs = []
+    typing = [bool(text)]
 
-    logo = tk.PhotoImage(file= os.path.join(base_dir, IMAGES[where]))
+    frame = tk.Frame(main, borderwidth=3, relief="solid")
+    frame.place(relx=0, rely=0, relheight=.15, relwidth=1, anchor="nw")
 
+    logo = tk.PhotoImage(file=os.path.join(base_dir, IMAGES[where]))
     img_lbl = tk.Label(frame, image=logo)
+    img_lbl.image = logo
     img_lbl.place(relx=0.2, rely=0.5, anchor="center")
 
-    speech_text(text, frame)
+    label = tk.Label(frame, text="", font=FONT)
+    label.place(relx=0.5, rely=0.5, anchor="center")
+
+    def show(i):
+        if exit_area_ind or not label.winfo_exists():
+            return
+        label.config(text=text[:i + 1])
+        if i == len(text) - 1:
+            typing[0] = False
+
+    def on_enter(event=None):
+        if typing[0]:                 
+            cancel_jobs_only()
+            label.config(text=text)
+            typing[0] = False
+        else:                         
+            unbound.set(True)
+
+    def cancel_jobs_only():
+        global speech_jobs
+        for job in speech_jobs:
+            main.after_cancel(job)
+        speech_jobs = []
+
+    for i in range(len(text)):
+        speech_jobs.append(main.after(text_scroll_speed.get() * i, show, i))
+
+    main.bind("<Return>", on_enter)
+    main.wait_variable(unbound)
+    main.unbind("<Return>")
+    cancel_jobs_only()
+
+    if frame.winfo_exists():
+        frame.destroy()
+    if exit_area_ind:
+        raise ExitInterrupt
+
+def settings_window():
+
+    clear_screen()
+    clear_buttons()
+    back_button.pack(side="right")
+
+    text_scroll_label = tk.Label(main, font=FONT, text= "Text Scroll Speed")
+    text_scroll_label.place(anchor="nw",relx=0,rely=0)
+
+    text_scroll_frame = tk.Frame(main)
+    text_scroll_frame.place(relx=0,rely=0.05,anchor="nw")
+    text_scroll_speed_bar = ttk.Scale(text_scroll_frame, from_=100, to=0, length= 200, variable=text_scroll_speed, command= lambda value: text_scroll_indicator.config(text=((text_scroll_speed.get()-100)*-1)))
+    text_scroll_speed_bar.pack(side="left")
+    text_scroll_indicator = tk.Label(text_scroll_frame, font= FONT, text= ((text_scroll_speed.get()-100)*-1))
+    text_scroll_indicator.pack(side="right")
+
+def clear_buttons():
+
+    inventory_button.pack_forget()
+    exit_button.pack_forget()
+    explore_button.pack_forget()
+    wipe_save_btn.pack_forget()
+    flee_button.pack_forget()
+    back_button.pack_forget()
+    settings_button.pack_forget()
+
+def say(*lines, where):
+    for line in lines:
+        speech_box(line, where)
 
 # Main 
 
@@ -846,7 +954,6 @@ bottom_right_frame = tk.Frame(main)
 bottom_right_frame.place(relx= 1, rely= 1, anchor="se")
 
 exit_button = tk.Button(bottom_right_frame, text= "Exit", command= exit_area, font= FONT)
-exit_button.pack(side="right")
 
 back_button = tk.Button(bottom_right_frame, text= "Back", font= FONT, command= lambda: back(location))
 
@@ -854,11 +961,11 @@ flee_button = tk.Button(bottom_right_frame, text= "Flee", font= FONT, command= l
 
 explore_button = tk.Button(bottom_left_frame, text="Explore", font= FONT, command= explore)
 
+settings_button = tk.Button(bottom_right_frame, text="Settings", font= FONT, command= settings_window)
+
 wipe_save_btn = tk.Button(bottom_right_frame, text= "Clear Save", font= FONT, command= you_sure)
-wipe_save_btn.pack(side= "right", padx=0)
 
 inventory_button = tk.Button(bottom_left_frame, text="Inventory", command= lambda: [open_inventory(), update_inv()], font=FONT)
-inventory_button.pack(side="left")
 
 player1 = Player()
 
