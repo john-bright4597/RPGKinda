@@ -3,8 +3,13 @@
     "health": 100,
     "max_health": 100,
     "money": 0,
+    "discovered": {},
+    "level": 0,
+    "exp": 0,
     "inv": {
-        "weapon": [],
+        "weapon": [
+            "fists"
+        ],
         "armor": [],
         "potion": {
             "health-potion": 0,
@@ -14,7 +19,10 @@
         "material": {
             "wood": 0,
             "stone": 0,
-            "raw-iron": 0
+            "raw-iron": 0,
+            "eldenite": 0,
+            "kenvilite": 0,
+            "dragon-scale": 0
         }
     }
 }
