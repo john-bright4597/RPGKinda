@@ -9,6 +9,7 @@ import random
 import json
 import os
 import functools
+import textwrap
 
 # json data handling
 
@@ -51,7 +52,7 @@ turn = True
 mons = None
 update_tracker = False
 in_inv = False
-first_time_GS = True
+first_time = {"gs":True,"bs":True}
 exit_area_ind = False
 unbound= None
 speech_jobs = []
@@ -390,12 +391,10 @@ def shop(where, which):
     if where == "grimsby":
         if which == "general":
 
-            global first_time_GS
-
-            if first_time_GS:
+            if first_time["gs"]:
+                first_time["gs"] = False
                 say("Hello, welcome to Mud & Dirt Co.",
-                "The finest general store all of the king's land", where="gs")
-                first_time_GS = False
+                "The finest general store all of the king's land.", where="gs")
 
             in_inv = True
 
@@ -434,6 +433,10 @@ def shop(where, which):
                 shop_label.pack(side= "right")
                 
         elif which == "black-smith":
+
+            if first_time["bs"]:
+                first_time["bs"] = False
+                say("Welcome in to Stone & Sons", "I can sell you some fresh weapons or upgrade your gear.", where="bs")
             
             name = tk.Label(main, text= "Stone & Sons", font= TITLE_FONT)
             name.place(relx= 0.5, rely= 0.2, anchor= "center")
@@ -864,11 +867,14 @@ def cancel_speech():
         unbound.set(True)
 
 def speech_box(text, where):
+
     global unbound, speech_jobs
+
+    wrapped = textwrap.fill(text, width= 40)
 
     unbound = tk.BooleanVar(value=False)
     speech_jobs = []
-    typing = [bool(text)]
+    typing = [bool(wrapped)]
 
     frame = tk.Frame(main, borderwidth=3, relief="solid")
     frame.place(relx=0, rely=0, relheight=.15, relwidth=1, anchor="nw")
@@ -882,10 +888,11 @@ def speech_box(text, where):
     label.place(relx=0.5, rely=0.5, anchor="center")
 
     def show(i):
+
         if exit_area_ind or not label.winfo_exists():
             return
-        label.config(text=text[:i + 1])
-        if i == len(text) - 1:
+        label.config(text=wrapped[:i + 1])
+        if i == len(wrapped) - 1:
             typing[0] = False
 
     def on_enter(event=None):
