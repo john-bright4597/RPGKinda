@@ -66,8 +66,6 @@ style.configure("TScale",
 
 #   SETTINGS
 
-#text_scroll_speed = 50
-
 text_scroll_speed = tk.IntVar(value=50)
 
 TITLE_FONT = ('arial', 24)
@@ -104,12 +102,6 @@ ITEMS_SALE_POTION = {
     "greater-health-potion": 30,
     "defence-potion": 25
 }
-
-#ITEMS_SALE_MATERIALS = {
-#    "wood" : 2,
-#    "stone" : 2,
-#    "raw-iron" : 6
-#}
 
 ITEMS_SALE_WEAPONS = {
     "wooden-sword": {"money": 15, "material": {"wood": 20}},
@@ -157,13 +149,12 @@ class Player():
 
     def __init__(self):
 
-        global data, exp_to_next_level
+        global data, exp_to_next_level, text_scroll_speed
 
         self.max_health = 100
         self.health = 100
         self.money = 0
         self.inv = default_inventory()
-        self.discovered = {"potion": set(), "material": set()}
         self.level = 0
         self.exp = 0        
 
@@ -173,18 +164,13 @@ class Player():
             self.money = data["money"]
             self.level = data["level"]
             self.exp = data["exp"]
-            self.discovered = data["discovered"]
             for i in data["inv"]["weapon"]: 
                 self.inv["weapon"].append(Item("weapon", i))
             for i in data["inv"]["armor"]: 
                 self.inv["armor"].append(Item("armor", i))
-            self.inv["potion"] = data["inv"]["potion"]
-            self.inv["material"] = data["inv"]["material"]
-
-        for cat, names in data.get("discovered", {}).items():
-            if cat in self.discovered:
-                self.discovered[cat].update(n for n in names if n in self.inv[cat])
-        self.refresh_discovered()
+            self.inv["potion"].update(data["inv"]["potion"])
+            self.inv["material"].update(data["inv"]["material"])
+            text_scroll_speed.set(data.get("settings", {}).get("text-scroll", 50))
 
         exp_to_next_level = 10 * 1.5 ** self.level
 
@@ -252,17 +238,12 @@ class Player():
         if update_tracker:
             update_combat_display(mons, health_label)
 
-    def refresh_discovered(self):
-        for cat in self.discovered:
-            self.discovered[cat].update(n for n, c in self.inv[cat].items() if c > 0)
-
     def to_save(self):
         data = {
             "saves": "player1",
             "health": self.health, 
             "max_health": self.max_health, 
             "money": self.money,
-            "discovered": {cat: sorted(names) for cat, names in self.discovered.items()},
             "level": self.level,
             "exp": self.exp, 
             "inv": {
@@ -270,6 +251,9 @@ class Player():
                 "armor": [i.name for i in self.inv["armor"]], 
                 "potion": self.inv["potion"],
                 "material": self.inv["material"]
+            },
+            "settings": {
+                "text-scroll": int(text_scroll_speed.get())
             }               
         }
 
@@ -531,14 +515,14 @@ def clean_save():
     global data, player1
 
     data = {
-        "saves": "player1",
+        "saves": "none",
         "health": 100, 
         "max_health": 100, 
         "money": 0, 
         "level": 0,
         "exp": 0,
-        "discovered": {"potion": set(), "material": set()},
-        "inv": default_inventory()              
+        "inv": default_inventory(),
+        "settings": {"text-scroll": int(text_scroll_speed.get())}              
     }
 
     try:
@@ -616,17 +600,14 @@ def update_inv(in_shop = False):
 
     level_label = tk.Label(inv, text=f"Level {player1.level}  EXP: {int(player1.exp)}/{int(exp_to_next_level)}", font=FONT)
     level_label.pack(pady=2)
-    
-    player1.refresh_discovered()
 
     for key, value in player1.inv.items():
-        if isinstance(value, dict) and key in player1.discovered:
-            value = {k: v for k, v in value.items() if k in player1.discovered[key]}
-            if not value:
-                continue
         key_label = tk.Label(inv, text=f' <-- {key} -->', font=FONT)
         key_label.pack(pady=2)
         if isinstance(value, dict):
+            value = {k: v for k, v in value.items() if v > 0}
+            if not value:
+                continue
             for sub_key, sub_val in value.items():
                 inv_frame = tk.Frame(inv)
                 inv_frame.pack(pady=2)
@@ -898,7 +879,7 @@ def speech_box(text, where):
     def on_enter(event=None):
         if typing[0]:                 
             cancel_jobs_only()
-            label.config(text=text)
+            label.config(text= wrapped)
             typing[0] = False
         else:                         
             unbound.set(True)
@@ -909,12 +890,14 @@ def speech_box(text, where):
             main.after_cancel(job)
         speech_jobs = []
 
-    for i in range(len(text)):
+    for i in range(len(wrapped)):
         speech_jobs.append(main.after(text_scroll_speed.get() * i, show, i))
 
     main.bind("<Return>", on_enter)
+    main.bind("<1>", on_enter)
     main.wait_variable(unbound)
     main.unbind("<Return>")
+    main.unbind("<1>")
     cancel_jobs_only()
 
     if frame.winfo_exists():

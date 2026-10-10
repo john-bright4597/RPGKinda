@@ -3,7 +3,6 @@
     "health": 100,
     "max_health": 100,
     "money": 0,
-    "discovered": {},
     "level": 0,
     "exp": 0,
     "inv": {
@@ -24,5 +23,8 @@
             "kenvilite": 0,
             "dragon-scale": 0
         }
+    },
+    "settings": {
+        "text-scroll": 50
     }
 }
