@@ -568,7 +568,6 @@ def start_screen():
     global bottom_right_frame
 
     clear_screen()
-
     clear_buttons()
 
     inventory_button.pack(side="left")
@@ -576,7 +575,7 @@ def start_screen():
     wipe_save_btn.pack(side= "right")
     settings_button.pack(side="right")
         
-    title = tk.Label(main, text="Game", font= TITLE_FONT)
+    title = tk.Label(main, text="RPGKinda", font= TITLE_FONT)
     title.place(relx= 0.5, rely= 0.3, anchor="center")
     title_start_button = tk.Button(main, text="Start", command= begin_game, font= FONT)
     title_start_button.place(relx= 0.5, rely= 0.7, anchor="center")
